@@ -1,0 +1,25 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "build SDL2 project",
+      "type": "shell",
+      "command": "g++",
+      "args": [
+        "-IC:/msys64/mingw64/include/SDL2",
+        "-LC:/msys64/mingw64/lib",
+        "-lmingw32",
+        "-lSDL2main",
+        "-lSDL2",
+        "${file}",
+        "-o",
+        "${fileDirname}/app.exe"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": ["$gcc"]
+    }
+  ]
+}
