@@ -1,87 +1,326 @@
 #include "board.h"
+#include <iostream>
+#include <algorithm>
+#include <cmath>
 
-Board::Board() { 
-    initBoard();
+Board::Board() {
+    init();
 }
 
-void Board::initBoard() {
-    // Inicjalizacja planszy: ustawienie pustych pól
-    for (int i = 0; i < 8; ++i)
-        for (int j = 0; j < 8; ++j)
-            board[i][j] = EMPTY;
-
-    // Ustawienie pionków AI (np. na górnych 3 rzędach) i gracza (dolne 3 rzedy)
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 8; ++j)
-            if ((i + j) % 2 == 1)
-                board[i][j] = AIP;
+void Board::init() {
+    // Wyczyść planszę
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            cells[i][j] = nullptr;
+        }
     }
-    for (int i = 5; i < 8; ++i) {
-        for (int j = 0; j < 8; ++j)
-            if ((i + j) % 2 == 1)
-                board[i][j] = PLAYER;
+    
+    // Umieść pionki gracza (na dole, wiersze 5-7)
+    for (int row = 5; row < 8; row++) {
+        for (int col = 0; col < SIZE; col++) {
+            if ((row + col) % 2 == 1) { // Tylko na ciemnych polach
+                cells[row][col] = std::make_shared<Piece>(false, false);
+            }
+        }
+    }
+    
+    // Umieść pionki AI (na górze, wiersze 0-2)
+    for (int row = 0; row < 3; row++) {
+        for (int col = 0; col < SIZE; col++) {
+            if ((row + col) % 2 == 1) { // Tylko na ciemnych polach
+                cells[row][col] = std::make_shared<Piece>(true, false);
+            }
+        }
     }
 }
 
-std::vector<Move> Board::getValidMoves(bool forAI) {
+std::vector<Move> Board::getValidMoves(bool forAI) const {
+    std::vector<Move> allMoves;
+    std::vector<Move> captureMoves;
+    
+    // Znajdź wszystkie możliwe ruchy
+    for (int row = 0; row < SIZE; row++) {
+        for (int col = 0; col < SIZE; col++) {
+            if (cells[row][col] && cells[row][col]->getIsAI() == forAI) {
+                auto pieceMoves = getPieceMovesAndCaptures(row, col, forAI);
+                for (const auto& move : pieceMoves) {
+                    if (!move.capturedPositions.empty()) {
+                        captureMoves.push_back(move);
+                    } else {
+                        allMoves.push_back(move);
+                    }
+                }
+            }
+        }
+    }
+    
+    // Jeśli są bicia, zwróć tylko bicia (zgodnie z regułami warcabów)
+    if (!captureMoves.empty()) {
+        return captureMoves;
+    }
+    
+    return allMoves;
+}
+
+std::vector<Move> Board::getPieceMovesAndCaptures(int row, int col, bool forAI) const {
     std::vector<Move> moves;
-    // Tutaj musisz zaimplementować logikę generowania legalnych ruchów
-    // - ruchy zwykłych pionków (przekątne, zbicia)
-    // - ruchy damki
-    return moves;
+    auto piece = cells[row][col];
+    
+    if (!piece || piece->getIsAI() != forAI) {
+        return moves;
+    }
+    
+    // Kierunki ruchu dla zwykłych pionków
+    std::vector<std::pair<int, int>> directions;
+    
+    if (piece->getIsKing()) {
+        // Damka może się poruszać we wszystkich kierunkach
+        directions = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+    } else {
+        // Zwykły pionek
+        if (forAI) {
+            // AI porusza się w dół
+            directions = {{1, -1}, {1, 1}};
+        } else {
+            // Gracz porusza się w górę
+            directions = {{-1, -1}, {-1, 1}};
+        }
+    }
+    
+    // Najpierw sprawdź bicia
+    std::vector<Move> captureMoves = getCaptureMoves(row, col, forAI);
+    if (!captureMoves.empty()) {
+        return captureMoves;
+    }
+    
+    // Jeśli nie ma bić, dodaj zwykłe ruchy
+    return getSimpleMoves(row, col, forAI);
 }
 
-bool Board::applyMove(const Move &move) {
-    board[move.toX][move.toY] = board[move.fromX][move.fromY];
-    board[move.fromX][move.fromY] = EMPTY;
-    // Dodatkowo: jeśli ruch wiąże się z biciem, usuń zbity pionek
+std::vector<Move> Board::getCaptureMoves(int row, int col, bool forAI) const {
+    std::vector<Move> captureMoves;
+    auto piece = cells[row][col];
+    
+    if (!piece) return captureMoves;
+    
+    std::vector<std::pair<int, int>> directions;
+    if (piece->getIsKing()) {
+        directions = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+    } else {
+        if (forAI) {
+            directions = {{1, -1}, {1, 1}};
+        } else {
+            directions = {{-1, -1}, {-1, 1}};
+        }
+    }
+    
+    for (const auto& dir : directions) {
+        if (canCapture(row, col, dir.first, dir.second, forAI)) {
+            int enemyRow = row + dir.first;
+            int enemyCol = col + dir.second;
+            int jumpRow = row + 2 * dir.first;
+            int jumpCol = col + 2 * dir.second;
+            
+            Move move(row, col, jumpRow, jumpCol);
+            move.capturedPositions.push_back({enemyRow, enemyCol});
+            captureMoves.push_back(move);
+        }
+    }
+    
+    return captureMoves;
+}
+
+std::vector<Move> Board::getSimpleMoves(int row, int col, bool forAI) const {
+    std::vector<Move> simpleMoves;
+    auto piece = cells[row][col];
+    
+    if (!piece) return simpleMoves;
+    
+    std::vector<std::pair<int, int>> directions;
+    if (piece->getIsKing()) {
+        directions = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+    } else {
+        if (forAI) {
+            directions = {{1, -1}, {1, 1}};
+        } else {
+            directions = {{-1, -1}, {-1, 1}};
+        }
+    }
+    
+    for (const auto& dir : directions) {
+        int newRow = row + dir.first;
+        int newCol = col + dir.second;
+        
+        if (isValidMove(row, col, newRow, newCol, forAI)) {
+            simpleMoves.push_back(Move(row, col, newRow, newCol));
+        }
+    }
+    
+    return simpleMoves;
+}
+
+bool Board::canCapture(int row, int col, int deltaRow, int deltaCol, bool forAI) const {
+    int enemyRow = row + deltaRow;
+    int enemyCol = col + deltaCol;
+    int jumpRow = row + 2 * deltaRow;
+    int jumpCol = col + 2 * deltaCol;
+    
+    // Sprawdź czy pozycje są w granicach planszy
+    if (!isValidPosition(enemyRow, enemyCol) || !isValidPosition(jumpRow, jumpCol)) {
+        return false;
+    }
+    
+    // Sprawdź czy na pozycji enemy jest przeciwnik
+    if (!cells[enemyRow][enemyCol] || cells[enemyRow][enemyCol]->getIsAI() == forAI) {
+        return false;
+    }
+    
+    // Sprawdź czy pozycja docelowa jest pusta
+    if (cells[jumpRow][jumpCol]) {
+        return false;
+    }
+    
     return true;
 }
 
-void Board::undoMove(const Move &move) {
-    // Cofnij ruch – pamiętaj, że przy kopiowaniu ruchów trzeba przechować informację o zbitych pionkach
-    board[move.fromX][move.fromY] = board[move.toX][move.toY];
-    board[move.toX][move.toY] = EMPTY;
+bool Board::isValidMove(int srcRow, int srcCol, int dstRow, int dstCol, bool forAI) const {
+    // Sprawdź granice planszy
+    if (!isValidPosition(srcRow, srcCol) || !isValidPosition(dstRow, dstCol)) {
+        return false;
+    }
+    
+    // Sprawdź czy pole źródłowe ma pionek gracza
+    auto piece = cells[srcRow][srcCol];
+    if (!piece || piece->getIsAI() != forAI) {
+        return false;
+    }
+    
+    // Sprawdź czy pole docelowe jest puste
+    if (cells[dstRow][dstCol]) {
+        return false;
+    }
+    
+    // Sprawdź czy ruch jest po przekątnej o jedną pozycję
+    int deltaRow = abs(dstRow - srcRow);
+    int deltaCol = abs(dstCol - srcCol);
+    if (deltaRow != 1 || deltaCol != 1) {
+        return false;
+    }
+    
+    // Sprawdź kierunek ruchu dla zwykłych pionków
+    if (!piece->getIsKing()) {
+        if (forAI && dstRow <= srcRow) {
+            return false; // AI musi się poruszać w dół
+        }
+        if (!forAI && dstRow >= srcRow) {
+            return false; // Gracz musi się poruszać w górę
+        }
+    }
+    return true;
+}
+
+void Board::applyMove(const Move& move) {
+    if (!isValidPosition(move.srcRow, move.srcCol) || 
+        !isValidPosition(move.dstRow, move.dstCol)) {
+        return;
+    }
+    
+    auto piece = cells[move.srcRow][move.srcCol];
+    if (!piece) return;
+    
+    // Przesuń pionek
+    cells[move.dstRow][move.dstCol] = piece;
+    cells[move.srcRow][move.srcCol] = nullptr;
+    
+    // Usuń zbite pionki
+    for (const auto& capturedPos : move.capturedPositions) {
+        cells[capturedPos.first][capturedPos.second] = nullptr;
+    }
+    
+    // Sprawdź promocję do damki
+    if (!piece->getIsKing()) {
+        if ((piece->getIsAI() && move.dstRow == SIZE - 1) ||
+            (!piece->getIsAI() && move.dstRow == 0)) {
+            piece->promote();
+        }
+    }
+}
+
+void Board::undoMove(const Move& move, const std::vector<std::shared_ptr<Piece>>& capturedPieces) {
+    // Przywróć pionek na początkową pozycję
+    auto piece = cells[move.dstRow][move.dstCol];
+    cells[move.srcRow][move.srcCol] = piece;
+    cells[move.dstRow][move.dstCol] = nullptr;
+    
+    // Przywróć zbite pionki
+    for (size_t i = 0; i < move.capturedPositions.size() && i < capturedPieces.size(); i++) {
+        const auto& pos = move.capturedPositions[i];
+        cells[pos.first][pos.second] = capturedPieces[i];
+    }
 }
 
 int Board::evaluate() const {
     int score = 0;
-    // Przykładowa heurystyka: dodaj punkty za pionki AI, odejmij za pionki gracza
-    for (int i = 0; i < 8; ++i)
-        for (int j = 0; j < 8; ++j) {
-            if (board[i][j] == PLAYER)
-                score -= 10;
-            else if (board[i][j] == AIP)
-                score += 10;
-            else if (board[i][j] == PLAYER_KING)
-                score -= 15;
-            else if (board[i][j] == AI_KING)
-                score += 15;
+    
+    for (int row = 0; row < SIZE; row++) {
+        for (int col = 0; col < SIZE; col++) {
+            if (cells[row][col]) {
+                int pieceValue = cells[row][col]->getIsKing() ? 30 : 10;
+                
+                if (cells[row][col]->getIsAI()) {
+                    score += pieceValue;
+                    // Bonus za pozycję (środek planszy)
+                    score += static_cast<int>(3 - abs(row - 3.5)) + static_cast<int>(3 - abs(col - 3.5));
+                } else {
+                    score -= pieceValue;
+                    // Kara za pozycję przeciwnika
+                    score -= static_cast<int>(3 - abs(row - 3.5)) + static_cast<int>(3 - abs(col - 3.5));
+                }
+            }
         }
+    }
+    
     return score;
 }
 
-bool Board::isTerminal() const {
-    // Prosty warunek zakończenia: jeden z graczy nie ma pionków
-    int playerCount = 0, aiCount = 0;
-    for (int i = 0; i < 8; ++i)
-        for (int j = 0; j < 8; ++j) {
-            if (board[i][j] == PLAYER || board[i][j] == PLAYER_KING)
-                playerCount++;
-            if (board[i][j] == AIP || board[i][j] == AI_KING)
-                aiCount++;
-        }
-    return (playerCount == 0 || aiCount == 0);
-}
-
 void Board::printBoard() const {
-    for (int i = 0; i < 8; ++i) {
-        for (int j = 0; j < 8; ++j)
-            std::cout << board[i][j] << " ";
+    std::cout << "  0 1 2 3 4 5 6 7" << std::endl;
+    for (int i = 0; i < SIZE; i++) {
+        std::cout << i << " ";
+        for (int j = 0; j < SIZE; j++) {
+            if (cells[i][j]) {
+                std::cout << cells[i][j]->getSymbol() << " ";
+            } else {
+                std::cout << ((i + j) % 2 == 0 ? "□ " : "■ ");
+            }
+        }
         std::cout << std::endl;
     }
 }
 
-PieceType Board::getPieceAt(int i, int j) const {
-    return board[i][j];
+std::shared_ptr<Piece> Board::getPiece(int row, int col) const {
+    if (isValidPosition(row, col)) {
+        return cells[row][col];
+    }
+    return nullptr;
+}
+
+bool Board::isValidPosition(int row, int col) const {
+    return row >= 0 && row < SIZE && col >= 0 && col < SIZE;
+}
+
+bool Board::hasValidMoves(bool forAI) const {
+    return !getValidMoves(forAI).empty();
+}
+
+int Board::countPieces(bool forAI) const {
+    int count = 0;
+    for (int row = 0; row < SIZE; row++) {
+        for (int col = 0; col < SIZE; col++) {
+            if (cells[row][col] && cells[row][col]->getIsAI() == forAI) {
+                count++;
+            }
+        }
+    }
+    return count;
 }

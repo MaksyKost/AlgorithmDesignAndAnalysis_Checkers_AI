@@ -1,17 +1,35 @@
 #include "src/game.h"
-#include <SDL.h> // wymagane do SDL_Delay
+#include "src/gui.h"
+#include "src/board.h"
+#include <iostream>
+#include <string>
 
 int main(int argc, char* argv[]) {
-    Game game;
-    game.init();
-
-    while (!game.isGameOver() && !game.shouldQuit()) {
-        game.handleInput();
-        game.update();
-        game.render();
-        SDL_Delay(50); // opóźnienie kontrolujące pętlę gry
+    std::string mode = "gui"; // domyślnie tryb graficzny
+    if (argc > 1) {
+        mode = argv[1];
     }
-    
-    game.clean();
+
+    if (mode == "gui") {
+        // Uruchomienie trybu graficznego
+        GUI gui;
+        if (!gui.init()) {
+            std::cerr << "Błąd inicjalizacji GUI (SDL)." << std::endl;
+            return 1;
+        }
+        Board board;
+        gui.run(board);
+        gui.close();
+    }
+    else if (mode == "cli") {
+        // Uruchomienie trybu konsolowego
+        Game game;
+        game.run();
+    }
+    else {
+        std::cerr << "Nieznany tryb: " << mode << ". Dostępne tryby: cli, gui." << std::endl;
+        return 1;
+    }
+
     return 0;
 }

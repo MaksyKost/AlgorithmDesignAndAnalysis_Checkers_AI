@@ -1,57 +1,37 @@
 #include "game.h"
 #include <iostream>
 
-Game::Game() : gameOver(false), playersTurn(true) {}
-
-Game::~Game() {
-    clean();
+Game::Game() : turnAI(false) { 
+    // Rozpocznij grę – plansza już inicjalizowana przez konstruktor Board
 }
 
-void Game::init() {
-    board.initBoard();
-    if (!gui.init()) {
-        std::cerr << "Błąd inicjalizacji GUI." << std::endl;
-        gameOver = true;
+void Game::run() {
+    while (!checkVictory()) {
+        board.printBoard();
+        processTurn();
+        turnAI = !turnAI;
     }
+    std::cout << "Koniec gry!" << std::endl;
 }
 
-void Game::handleInput() {
-    gui.handleEvents();
-    // Jeśli to ruch gracza, pobierz dane – poniżej uproszczony przykład wejścia tekstowego
-    if (playersTurn) {
-        int sx, sy, dx, dy;
-        std::cout << "Podaj współrzędne ruchu (sx sy dx dy): ";
-        std::cin >> sx >> sy >> dx >> dy;
-        Move move { sx, sy, dx, dy };
-        // Tu możesz dodać walidację poprawności ruchu:
-        if (true /* lub warunek poprawności */) {
-            board.applyMove(move);
-            playersTurn = false;
-        }
-    }
-}
-
-void Game::update() {
-    // Jeśli to ruch AI, wybierz i wykonaj ruch
-    if (!playersTurn && !gameOver) {
-        Move bestMove = ai.getBestMove(board, 3); // głębokość np. 3
+void Game::processTurn() {
+    if (turnAI) {
+        // Dla AI wykorzystaj funkcję getBestMove
+        Move bestMove = ai.getBestMove(board, 5);
         board.applyMove(bestMove);
-        playersTurn = true;
+        std::cout << "AI wykonało ruch" << std::endl;
+    } else {
+        // Opcja użytkownika – pobranie ruchu z GUI lub konsoli
+        // Na potrzeby demonstracji możemy pobrać dane wejściowe z konsoli
+        Move move;
+        std::cout << "Podaj ruch (srcRow srcCol dstRow dstCol): ";
+        std::cin >> move.srcRow >> move.srcCol >> move.dstRow >> move.dstCol;
+        board.applyMove(move);
     }
-
-    // Aktualizacja stanu gry
-    if (board.isTerminal())
-        gameOver = true;
 }
 
-void Game::render() {
-    gui.render(board);
-}
-
-bool Game::isGameOver() const {
-    return gameOver;
-}
-
-void Game::clean() {
-    gui.clean();
+bool Game::checkVictory() {
+    // Przykładowa logika – sprawdzenie warunków zwycięstwa
+    // np. brak ruchów lub pionków którejś ze stron
+    return false;
 }

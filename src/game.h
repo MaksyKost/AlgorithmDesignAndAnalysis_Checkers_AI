@@ -3,28 +3,22 @@
 
 #include "board.h"
 #include "ai.h"
-#include "gui.h"
 
 class Game {
+public:
+    Game();
+    ~Game() = default;
+
+    // Główna pętla gry
+    void run();
+
 private:
     Board board;
     AI ai;
-    GUI gui;
-    bool gameOver;
-    bool playersTurn; // true = ruch gracza, false = ruch AI
-public:
-    Game();
-    ~Game();
-    void init();
-    void handleInput();
-    void update();
-    void render();
-    bool isGameOver() const;
-    void clean();
+    bool turnAI; // true, gdy kolej AI, false dla gracza
 
-    // Umożliwia sprawdzenie, czy okno powinno się zamknąć
-    bool shouldQuit() const { return gui.shouldQuit(); }
-
+    void processTurn();
+    bool checkVictory();
 };
 
-#endif
+#endif // GAME_H
