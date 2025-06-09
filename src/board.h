@@ -4,7 +4,7 @@
 #include <vector>
 #include <iostream>
 
-enum PieceType { EMPTY, PLAYER, AI, PLAYER_KING, AI_KING };
+enum PieceType { EMPTY, PLAYER, AIP, PLAYER_KING, AI_KING };
 
 struct Move {
     int fromX, fromY;

@@ -67,7 +67,7 @@ void GUI::handleEvents() {
     }
 }
 
-bool GUI::shouldQuit() {
+bool GUI::shouldQuit() const {
     return quit;
 }
 

@@ -11,7 +11,7 @@ public:
     bool init();
     void render(Board &board);
     void handleEvents();
-    bool shouldQuit();
+    bool shouldQuit() const;
     void clean();
 
 private:

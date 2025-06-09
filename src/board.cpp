@@ -14,7 +14,7 @@ void Board::initBoard() {
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 8; ++j)
             if ((i + j) % 2 == 1)
-                board[i][j] = AI;
+                board[i][j] = AIP;
     }
     for (int i = 5; i < 8; ++i) {
         for (int j = 0; j < 8; ++j)
@@ -51,7 +51,7 @@ int Board::evaluate() const {
         for (int j = 0; j < 8; ++j) {
             if (board[i][j] == PLAYER)
                 score -= 10;
-            else if (board[i][j] == AI)
+            else if (board[i][j] == AIP)
                 score += 10;
             else if (board[i][j] == PLAYER_KING)
                 score -= 15;
@@ -68,7 +68,7 @@ bool Board::isTerminal() const {
         for (int j = 0; j < 8; ++j) {
             if (board[i][j] == PLAYER || board[i][j] == PLAYER_KING)
                 playerCount++;
-            if (board[i][j] == AI || board[i][j] == AI_KING)
+            if (board[i][j] == AIP || board[i][j] == AI_KING)
                 aiCount++;
         }
     return (playerCount == 0 || aiCount == 0);

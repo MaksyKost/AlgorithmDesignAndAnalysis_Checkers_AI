@@ -6,6 +6,12 @@
 #include "gui.h"
 
 class Game {
+private:
+    Board board;
+    AI ai;
+    GUI gui;
+    bool gameOver;
+    bool playersTurn; // true = ruch gracza, false = ruch AI
 public:
     Game();
     ~Game();
@@ -19,12 +25,6 @@ public:
     // Umożliwia sprawdzenie, czy okno powinno się zamknąć
     bool shouldQuit() const { return gui.shouldQuit(); }
 
-private:
-    Board board;
-    AI ai;
-    GUI gui;
-    bool gameOver;
-    bool playersTurn; // true = ruch gracza, false = ruch AI
 };
 
 #endif
