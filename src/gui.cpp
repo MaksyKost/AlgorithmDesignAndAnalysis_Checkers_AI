@@ -108,6 +108,7 @@ void GUI::handleEvents(Board &board) {
                 gameOver = false;
                 playerTurn = true;
                 resetSelection();
+                moveCount = 0;
                 gameStatus = "Nowa gra - Twoja kolej";
             }
         }
