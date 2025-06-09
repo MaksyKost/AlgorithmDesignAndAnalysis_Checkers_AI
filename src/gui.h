@@ -35,6 +35,8 @@ private:
     int selectedCol;
     bool pieceSelected;
     std::vector<Move> validMoves;
+
+    int moveCount = 0;
     
     // Stałe dla wyświetlania
     static const int WINDOW_WIDTH = 800;

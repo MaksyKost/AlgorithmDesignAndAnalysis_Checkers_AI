@@ -277,16 +277,105 @@ void GUI::drawValidMoves() {
 }
 
 void GUI::drawUI(Board& board) {
-    // Rysuj status gry po prawej stronie planszy
-    SDL_Rect statusRect = {BOARD_OFFSET_X + BOARD_SIZE + 20, BOARD_OFFSET_Y, 200, 100};
+    // Zwiększ rozmiar prostokąta statusu
+    SDL_Rect statusRect = {BOARD_OFFSET_X + BOARD_SIZE + 20, BOARD_OFFSET_Y, 220, 180};
     setColor(255, 255, 255); // Biały tło
     SDL_RenderFillRect(renderer, &statusRect);
-    
+
     setColor(0, 0, 0); // Czarna ramka
     SDL_RenderDrawRect(renderer, &statusRect);
-    
-    // Dodaj wizualny wskaźnik aktualnej tury
+
+    /* // Dodaj wizualny wskaźnik aktualnej tury
     SDL_Rect turnIndicator = {statusRect.x + 10, statusRect.y + 10, 20, 20};
+    if (playerTurn) {
+        setColor(255, 255, 255); // Biały dla gracza
+    } else {
+        setColor(139, 69, 19); // Brązowy dla AI
+    }
+    SDL_RenderFillRect(renderer, &turnIndicator);
+    setColor(0, 0, 0);
+    SDL_RenderDrawRect(renderer, &turnIndicator);*/
+
+    drawDifficultyButtons();
+
+    // Rysuj tekst tylko jeśli czcionka jest dostępna
+    int lastTextY = statusRect.y + 15;
+    int textHeight = 0;
+    if (font) {
+        SDL_Color black = {0, 0, 0, 255};
+
+        // --- NOWOŚĆ: Łamanie długiego tekstu na linie ---
+        std::istringstream iss(gameStatus);
+        std::string word, line;
+        int y = statusRect.y + 15;
+        int maxWidth = statusRect.w - 20;
+        while (iss >> word) {
+            std::string testLine = line + (line.empty() ? "" : " ") + word;
+            int w = 0, h = 0;
+            TTF_SizeUTF8(font, testLine.c_str(), &w, &h);
+            if (w > maxWidth && !line.empty()) {
+                drawText(line, statusRect.x + 10, y, black);
+                y += h + 2;
+                line = word;
+                textHeight = h;
+            } else {
+                line = testLine;
+                textHeight = h;
+            }
+        }
+        if (!line.empty()) {
+            drawText(line, statusRect.x + 10, y, black);
+            lastTextY = y;
+        }
+        lastTextY += textHeight + 5; // Pozycja pod ostatnią linią tekstu
+
+        // Dodaj informacje o liczbie pionków
+        std::string playerPieces = "Gracz: " + std::to_string(board.countPieces(false));
+        std::string aiPieces = "AI: " + std::to_string(board.countPieces(true));
+
+        drawText(playerPieces, statusRect.x + 10, statusRect.y + 120, black);
+        drawText(aiPieces, statusRect.x + 10, statusRect.y + 140, black);
+
+        if (gameOver) {
+            drawText("Nacisnij R - restart", statusRect.x + 10, statusRect.y + 160, black);
+        }
+    }
+
+    // Kolorowy prostokąt pod tekstem końca gry
+    if (gameOver) {
+        // Sprawdź czy tekst statusu zawiera "Przegrałeś" lub "Wygrałeś"
+        bool przegrales = gameStatus.find("Przegrałeś") != std::string::npos;
+        bool wygrales = gameStatus.find("Wygrałeś") != std::string::npos;
+        if (przegrales || wygrales) {
+            SDL_Rect endRect = {statusRect.x + 10, lastTextY, 180, 30};
+            if (przegrales) setColor(255, 0, 0); // Czerwony
+            if (wygrales) setColor(0, 200, 0);   // Zielony
+            SDL_RenderFillRect(renderer, &endRect);
+            setColor(0, 0, 0);
+            SDL_RenderDrawRect(renderer, &endRect);
+
+            // Wyśrodkuj tekst w prostokącie
+            if (font) {
+                SDL_Color black = {0, 0, 0, 255};
+                std::string msg = przegrales ? "Przegrałeś!" : "Wygrałeś!";
+                int w = 0, h = 0;
+                TTF_SizeUTF8(font, msg.c_str(), &w, &h);
+                int textX = endRect.x + (endRect.w - w) / 2;
+                int textY = endRect.y + (endRect.h - h) / 2;
+                drawText(msg, textX, textY, black);
+            }
+        }
+    }
+
+    // Wskaźnik tury w prawym dolnym rogu okna komunikatu
+    int indicatorSize = 24;
+    int margin = 10;
+    SDL_Rect turnIndicator = {
+        statusRect.x + statusRect.w - indicatorSize - margin,
+        statusRect.y + statusRect.h - indicatorSize - margin,
+        indicatorSize,
+        indicatorSize
+    };
     if (playerTurn) {
         setColor(255, 255, 255); // Biały dla gracza
     } else {
@@ -296,34 +385,15 @@ void GUI::drawUI(Board& board) {
     setColor(0, 0, 0);
     SDL_RenderDrawRect(renderer, &turnIndicator);
 
-    drawDifficultyButtons();
-    
-    if (gameOver) {
-        // Rysuj prostokąt "Game Over"
-        SDL_Rect gameOverRect = {statusRect.x + 10, statusRect.y + 50, 180, 30};
-        setColor(255, 0, 0); // Czerwony
-        SDL_RenderFillRect(renderer, &gameOverRect);
-        setColor(0, 0, 0);
-        SDL_RenderDrawRect(renderer, &gameOverRect);
-    }
-    
-    // Rysuj tekst tylko jeśli czcionka jest dostępna
     if (font) {
         SDL_Color black = {0, 0, 0, 255};
-        drawText(gameStatus, statusRect.x + 40, statusRect.y + 15, black);
-        
-        // Dodaj informacje o liczbie pionków
-        std::string playerPieces = "Gracz: " + std::to_string(board.countPieces(false));
-        std::string aiPieces = "AI: " + std::to_string(board.countPieces(true));
-        
-        drawText(playerPieces, statusRect.x + 10, statusRect.y + 120, black);
-        drawText(aiPieces, statusRect.x + 10, statusRect.y + 140, black);
-        
-        if (gameOver) {
-            drawText("Nacisnij R - restart", statusRect.x + 10, statusRect.y + 160, black);
-        }
+        std::string movesText = std::to_string(moveCount);
+        int w = 0, h = 0;
+        TTF_SizeUTF8(font, movesText.c_str(), &w, &h);
+        int textX = turnIndicator.x + (turnIndicator.w - w) / 2;
+        int textY = turnIndicator.y + (turnIndicator.h - h) / 2;
+        drawText(movesText, textX, textY, black);
     }
-
 }
 
 void GUI::getCellFromMouse(int mouseX, int mouseY, int &row, int &col) {
@@ -387,6 +457,7 @@ void GUI::makeMove(Board &board, int row, int col) {
         playerTurn = false;
         gameStatus = "Kolej AI...";
         resetSelection();
+        moveCount++;
     } else {
         // Sprawdź czy kliknął na inny swój pionek
         auto piece = board.getPiece(row, col);
@@ -412,6 +483,7 @@ void GUI::processAITurn(Board &board) {
         board.applyMove(aiMove);
         playerTurn = true;
         gameStatus = "Twoja kolej - wybierz pionek";
+        moveCount++;
     } else {
         gameOver = true;
         gameStatus = "Wygrałeś! AI nie ma ruchów. Naciśnij R dla nowej gry";
