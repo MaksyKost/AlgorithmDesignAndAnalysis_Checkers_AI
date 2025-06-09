@@ -6,6 +6,8 @@ Game::Game() : turnAI(false) {
 }
 
 void Game::run() {
+    showDifficultyMenu();
+
     while (!checkVictory()) {
         board.printBoard();
         processTurn();
@@ -15,10 +17,28 @@ void Game::run() {
     std::cout << "Koniec gry!" << std::endl;
 }
 
+void Game::showDifficultyMenu() {
+    std::cout << "Wybierz poziom trudności:" << std::endl;
+    std::cout << "1 - Łatwy" << std::endl;
+    std::cout << "2 - Średni" << std::endl;
+    std::cout << "3 - Trudny" << std::endl;
+    std::cout << "Wybór: ";
+    
+    int choice;
+    std::cin >> choice;
+    
+    switch(choice) {
+        case 1: difficulty = Difficulty::EASY; break;
+        case 2: difficulty = Difficulty::MEDIUM; break;
+        case 3: difficulty = Difficulty::HARD; break;
+        default: difficulty = Difficulty::MEDIUM; break;
+    }
+}
+
 void Game::processTurn() {
     if (turnAI) {
         // Dla AI wykorzystaj funkcję getBestMove
-        Move bestMove = ai.getBestMove(board, 5);
+        Move bestMove = ai.getBestMove(board, difficulty);
         board.applyMove(bestMove);
         std::cout << "AI wykonało ruch" << std::endl;
     } else {

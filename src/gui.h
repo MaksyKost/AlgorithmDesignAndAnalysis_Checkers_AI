@@ -22,6 +22,8 @@ private:
     SDL_Renderer* renderer;
     TTF_Font* font;  // Dodane pole dla czcionki
     AI ai;
+
+    Difficulty currentDifficulty = Difficulty::MEDIUM;
     
     bool gameRunning;
     bool playerTurn;
@@ -64,6 +66,16 @@ private:
     void setColor(int r, int g, int b, int a = 255);
 
     void drawText(const std::string& text, int x, int y, SDL_Color color);
+
+    // Stałe dla przycisków
+    static const int BUTTON_WIDTH = 80;
+    static const int BUTTON_HEIGHT = 30;
+    static const int BUTTON_SPACING = 10;
+
+    // Nowe funkcje
+    void drawDifficultyButtons();
+    void handleDifficultyClick(int mouseX, int mouseY);
+    SDL_Rect getButtonRect(int buttonIndex); // 0=Easy, 1=Medium, 2=Hard
 };
 
 #endif // GUI_H

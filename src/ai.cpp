@@ -78,3 +78,7 @@ int AI::minimax(Board board, int depth, int alpha, int beta, bool maximizingPlay
         return minEval;
     }
 }
+
+Move AI::getBestMove(Board board, Difficulty difficulty) {
+    return getBestMove(board, static_cast<int>(difficulty));
+}

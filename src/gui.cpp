@@ -78,16 +78,22 @@ void GUI::handleEvents(Board &board) {
         if (e.type == SDL_QUIT) {
             gameRunning = false;
         }
-        else if (e.type == SDL_MOUSEBUTTONDOWN && playerTurn && !gameOver) {
+        else if (e.type == SDL_MOUSEBUTTONDOWN) {
             if (e.button.button == SDL_BUTTON_LEFT) {
-                int row, col;
-                getCellFromMouse(e.button.x, e.button.y, row, col);
-                
-                if (isValidCell(row, col)) {
-                    if (!pieceSelected) {
-                        selectPiece(board, row, col);
-                    } else {
-                        makeMove(board, row, col);
+                // Sprawdź czy kliknięto przycisk trudności
+                handleDifficultyClick(e.button.x, e.button.y);
+
+                // Obsługa planszy tylko jeśli tura gracza i gra nie jest zakończona
+                if (playerTurn && !gameOver) {
+                    int row, col;
+                    getCellFromMouse(e.button.x, e.button.y, row, col);
+
+                    if (isValidCell(row, col)) {
+                        if (!pieceSelected) {
+                            selectPiece(board, row, col);
+                        } else {
+                            makeMove(board, row, col);
+                        }
                     }
                 }
             }
@@ -289,6 +295,8 @@ void GUI::drawUI(Board& board) {
     SDL_RenderFillRect(renderer, &turnIndicator);
     setColor(0, 0, 0);
     SDL_RenderDrawRect(renderer, &turnIndicator);
+
+    drawDifficultyButtons();
     
     if (gameOver) {
         // Rysuj prostokąt "Game Over"
@@ -315,6 +323,7 @@ void GUI::drawUI(Board& board) {
             drawText("Nacisnij R - restart", statusRect.x + 10, statusRect.y + 160, black);
         }
     }
+
 }
 
 void GUI::getCellFromMouse(int mouseX, int mouseY, int &row, int &col) {
@@ -396,8 +405,9 @@ void GUI::processAITurn(Board &board) {
         gameStatus = "Wygrałeś! Naciśnij R dla nowej gry";
         return;
     }
+
+    Move aiMove = ai.getBestMove(board, currentDifficulty); // użyj wybranej trudności
     
-    Move aiMove = ai.getBestMove(board, 5);
     if (aiMove.srcRow != -1) { // Sprawdź czy AI znalazło ruch
         board.applyMove(aiMove);
         playerTurn = true;
@@ -513,6 +523,57 @@ void GUI::checkPromotion(std::shared_ptr<Piece> cells[Board::SIZE][Board::SIZE])
         if (piece && piece->getIsAI() && !piece->getIsKing()) {
             piece->promote();
             std::cout << "AI pionek awansował do damki na (7," << col << ")!" << std::endl;
+        }
+    }
+}
+
+void GUI::handleDifficultyClick(int mouseX, int mouseY) {
+    for (int i = 0; i < 3; i++) {
+        SDL_Rect buttonRect = getButtonRect(i);
+        if (mouseX >= buttonRect.x && mouseX <= buttonRect.x + buttonRect.w &&
+            mouseY >= buttonRect.y && mouseY <= buttonRect.y + buttonRect.h) {
+            
+            switch(i) {
+                case 0: currentDifficulty = Difficulty::EASY; break;
+                case 1: currentDifficulty = Difficulty::MEDIUM; break;
+                case 2: currentDifficulty = Difficulty::HARD; break;
+            }
+            break;
+        }
+    }
+}
+
+SDL_Rect GUI::getButtonRect(int buttonIndex) {
+    int startX = BOARD_OFFSET_X + BOARD_SIZE + 20;
+    int startY = BOARD_OFFSET_Y + 200 + buttonIndex * (BUTTON_HEIGHT + BUTTON_SPACING);
+    
+    return {startX, startY, BUTTON_WIDTH, BUTTON_HEIGHT};
+}
+
+void GUI::drawDifficultyButtons() {
+    const char* labels[] = {"Łatwy", "Średni", "Trudny"};
+    Difficulty difficulties[] = {Difficulty::EASY, Difficulty::MEDIUM, Difficulty::HARD};
+    
+    for (int i = 0; i < 3; i++) {
+        SDL_Rect buttonRect = getButtonRect(i);
+        
+        // Kolor przycisku - podświetl aktywny
+        if (currentDifficulty == difficulties[i]) {
+            setColor(100, 200, 100); // Zielony dla aktywnego
+        } else {
+            setColor(200, 200, 200); // Szary dla nieaktywnego
+        }
+        
+        SDL_RenderFillRect(renderer, &buttonRect);
+        
+        // Ramka
+        setColor(0, 0, 0);
+        SDL_RenderDrawRect(renderer, &buttonRect);
+        
+        // Tekst
+        if (font) {
+            SDL_Color black = {0, 0, 0, 255};
+            drawText(labels[i], buttonRect.x + 5, buttonRect.y + 5, black);
         }
     }
 }
