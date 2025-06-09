@@ -11,6 +11,7 @@ public:
 
     // Główna pętla gry
     void run();
+    void checkPromotion(std::shared_ptr<Piece> cells[Board::SIZE][Board::SIZE]);
 
 private:
     Board board;

@@ -119,11 +119,25 @@ std::vector<Move> Board::getSimpleMoves(int row, int col, bool forAI) const {
     }
     
     for (const auto& dir : directions) {
-        int newRow = row + dir.first;
-        int newCol = col + dir.second;
-        
-        if (isValidMove(row, col, newRow, newCol, forAI)) {
-            simpleMoves.push_back(Move(row, col, newRow, newCol));
+        if (piece->getIsKing()) {
+            // Damka może się poruszać na dowolną odległość
+            for (int distance = 1; distance < SIZE; distance++) {
+                int newRow = row + dir.first * distance;
+                int newCol = col + dir.second * distance;
+                
+                if (!isValidPosition(newRow, newCol)) break;
+                if (cells[newRow][newCol]) break; // Pole zajęte
+                
+                simpleMoves.push_back(Move(row, col, newRow, newCol));
+            }
+        } else {
+            // Zwykły pionek - tylko jedno pole
+            int newRow = row + dir.first;
+            int newCol = col + dir.second;
+            
+            if (isValidMove(row, col, newRow, newCol, forAI)) {
+                simpleMoves.push_back(Move(row, col, newRow, newCol));
+            }
         }
     }
     
@@ -152,6 +166,37 @@ bool Board::canCapture(int row, int col, int deltaRow, int deltaCol, bool forAI)
     }
     
     return true;
+}
+
+bool Board::canCaptureKing(int row, int col, int deltaRow, int deltaCol, bool forAI, int& enemyRow, int& enemyCol, int& jumpRow, int& jumpCol) const {
+    for (int distance = 1; distance < SIZE - 1; distance++) {
+        int checkRow = row + deltaRow * distance;
+        int checkCol = col + deltaCol * distance;
+        
+        if (!isValidPosition(checkRow, checkCol)) return false;
+        
+        if (cells[checkRow][checkCol]) {
+            // Znaleziono pionek
+            if (cells[checkRow][checkCol]->getIsAI() != forAI) {
+                // To przeciwnik - sprawdź czy można go zbić
+                enemyRow = checkRow;
+                enemyCol = checkCol;
+                
+                // Sprawdź wszystkie możliwe pozycje lądowania za przeciwnikiem
+                for (int landDistance = 1; landDistance < SIZE; landDistance++) {
+                    jumpRow = enemyRow + deltaRow * landDistance;
+                    jumpCol = enemyCol + deltaCol * landDistance;
+                    
+                    if (!isValidPosition(jumpRow, jumpCol)) break;
+                    if (cells[jumpRow][jumpCol]) break;
+                    
+                    return true; // Można zbić
+                }
+            }
+            return false; // Własny pionek lub nie można zbić
+        }
+    }
+    return false;
 }
 
 bool Board::isValidMove(int srcRow, int srcCol, int dstRow, int dstCol, bool forAI) const {
@@ -188,6 +233,7 @@ bool Board::isValidMove(int srcRow, int srcCol, int dstRow, int dstCol, bool for
         }
     }
     return true;
+
 }
 
 void Board::applyMove(const Move& move) {
@@ -210,14 +256,10 @@ void Board::applyMove(const Move& move) {
         }
     }
     
-    // Sprawdź promocję do damki (TYLKO na końcu sekwencji bić)
-    if (!piece->getIsKing()) {
-        if ((piece->getIsAI() && move.dstRow == SIZE - 1) ||
-            (!piece->getIsAI() && move.dstRow == 0)) {
-            piece->promote();
-        }
-    }
+    // Sprawdź promocję do damki na podstawie współrzędnych
+    //checkPromotion(move, piece);
 }
+
 void Board::undoMove(const Move& move, const std::vector<std::shared_ptr<Piece>>& capturedPieces) {
     // Przywróć pionek na początkową pozycję
     auto piece = cells[move.dstRow][move.dstCol];
@@ -300,83 +342,127 @@ int Board::countPieces(bool forAI) const {
 std::vector<Move> Board::getMultiCaptureMoves(int row, int col, bool forAI, Move currentMove) const {
     std::vector<Move> allCaptures;
     auto piece = cells[row][col];
-    
+
     if (!piece) return allCaptures;
-    
+
     std::vector<std::pair<int, int>> directions;
     if (piece->getIsKing()) {
         directions = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
     } else {
-        if (forAI) {
-            directions = {{1, -1}, {1, 1}};
-        } else {
-            directions = {{-1, -1}, {-1, 1}};
-        }
+        directions = forAI ? std::vector<std::pair<int, int>>{{1, -1}, {1, 1}} : std::vector<std::pair<int, int>>{{-1, -1}, {-1, 1}};
     }
-    
+
     bool hasCaptures = false;
-    
+
     for (const auto& dir : directions) {
-        if (canCapture(row, col, dir.first, dir.second, forAI)) {
-            int enemyRow = row + dir.first;
-            int enemyCol = col + dir.second;
-            int jumpRow = row + 2 * dir.first;
-            int jumpCol = col + 2 * dir.second;
-            
-            // Sprawdź czy ten pionek nie został już zbity w tym ruchu
-            bool alreadyCaptured = false;
-            for (const auto& capturedPos : currentMove.capturedPositions) {
-                if (capturedPos.first == enemyRow && capturedPos.second == enemyCol) {
-                    alreadyCaptured = true;
-                    break;
+        if (piece->getIsKing()) {
+            int step = 1;
+            while (true) {
+                int enemyRow = row + step * dir.first;
+                int enemyCol = col + step * dir.second;
+                int jumpRow = row + (step + 1) * dir.first;
+                int jumpCol = col + (step + 1) * dir.second;
+
+                if (!isValidPosition(enemyRow, enemyCol) || !isValidPosition(jumpRow, jumpCol)) break;
+                if (!cells[enemyRow][enemyCol]) { 
+                    step++; 
+                    continue; 
                 }
+
+                if (canCaptureKing(row, col, dir.first, dir.second, forAI, enemyRow, enemyCol, jumpRow, jumpCol)) {
+                    bool alreadyCaptured = false;
+                    for (const auto& capturedPos : currentMove.capturedPositions) {
+                        if (capturedPos.first == enemyRow && capturedPos.second == enemyCol) {
+                            alreadyCaptured = true;
+                            break;
+                        }
+                    }
+
+                    if (!alreadyCaptured) {
+                        hasCaptures = true;
+
+                        Move newMove = currentMove;
+                        if (newMove.srcRow == -1) {
+                            newMove.srcRow = row;
+                            newMove.srcCol = col;
+                        }
+                        newMove.dstRow = jumpRow;
+                        newMove.dstCol = jumpCol;
+                        newMove.capturedPositions.push_back({enemyRow, enemyCol});
+
+                        Board tempBoard = *this;
+                        tempBoard.cells[row][col] = nullptr;
+                        tempBoard.cells[jumpRow][jumpCol] = piece;
+                        tempBoard.cells[enemyRow][enemyCol] = nullptr;
+
+                        auto furtherCaptures = tempBoard.getMultiCaptureMoves(jumpRow, jumpCol, forAI, newMove);
+                        
+                        if (furtherCaptures.empty()) {
+                            allCaptures.push_back(newMove);
+                        } else {
+                            allCaptures.insert(allCaptures.end(), furtherCaptures.begin(), furtherCaptures.end());
+                        }
+                    }
+                }
+                break;
             }
-            
-            if (alreadyCaptured) continue;
-            
-            hasCaptures = true;
-            
-            // Utwórz nowy ruch
-            Move newMove = currentMove;
-            if (newMove.srcRow == -1) {
-                // Pierwszy ruch w sekwencji
-                newMove.srcRow = row;
-                newMove.srcCol = col;
-            }
-            newMove.dstRow = jumpRow;
-            newMove.dstCol = jumpCol;
-            newMove.capturedPositions.push_back({enemyRow, enemyCol});
-            
-            // Symuluj ruch na kopii planszy
-            Board tempBoard = *this;
-            tempBoard.cells[row][col] = nullptr;
-            tempBoard.cells[jumpRow][jumpCol] = piece;
-            tempBoard.cells[enemyRow][enemyCol] = nullptr;
-            
-            // Sprawdź czy z nowej pozycji można dalej bić
-            auto furtherCaptures = tempBoard.getMultiCaptureMoves(jumpRow, jumpCol, forAI, newMove);
-            
-            if (furtherCaptures.empty()) {
-                // Koniec sekwencji bić
-                allCaptures.push_back(newMove);
-            } else {
-                // Dodaj wszystkie dalsze sekwencje
-                for (const auto& furtherMove : furtherCaptures) {
-                    allCaptures.push_back(furtherMove);
+        } else {
+            if (canCapture(row, col, dir.first, dir.second, forAI)) {
+                int enemyRow = row + dir.first;
+                int enemyCol = col + dir.second;
+                int jumpRow = row + 2 * dir.first;
+                int jumpCol = col + 2 * dir.second;
+
+                bool alreadyCaptured = false;
+                for (const auto& capturedPos : currentMove.capturedPositions) {
+                    if (capturedPos.first == enemyRow && capturedPos.second == enemyCol) {
+                        alreadyCaptured = true;
+                        break;
+                    }
+                }
+
+                if (!alreadyCaptured) {
+                    hasCaptures = true;
+
+                    Move newMove = currentMove;
+                    if (newMove.srcRow == -1) {
+                        newMove.srcRow = row;
+                        newMove.srcCol = col;
+                    }
+                    newMove.dstRow = jumpRow;
+                    newMove.dstCol = jumpCol;
+                    newMove.capturedPositions.push_back({enemyRow, enemyCol});
+
+                    Board tempBoard = *this;
+                    tempBoard.cells[row][col] = nullptr;
+                    tempBoard.cells[jumpRow][jumpCol] = piece;
+                    tempBoard.cells[enemyRow][enemyCol] = nullptr;
+
+                    auto furtherCaptures = tempBoard.getMultiCaptureMoves(jumpRow, jumpCol, forAI, newMove);
+
+                    if (furtherCaptures.empty()) {
+                        allCaptures.push_back(newMove);
+                    } else {
+                        allCaptures.insert(allCaptures.end(), furtherCaptures.begin(), furtherCaptures.end());
+                    }
                 }
             }
         }
     }
-    
-    // Jeśli to pierwszy poziom rekursji i nie ma bić, zwróć pusty wektor
-    if (currentMove.srcRow == -1 && !hasCaptures) {
-        return allCaptures;
-    }
-    
-    // Jeśli to nie pierwszy poziom i nie ma dalszych bić, zwróć aktualny ruch
-    if (currentMove.srcRow != -1 && !hasCaptures) {
-        allCaptures.push_back(currentMove);
-    }
-    
+
+    if (currentMove.srcRow == -1 && !hasCaptures) return allCaptures;
+    if (currentMove.srcRow != -1 && !hasCaptures) allCaptures.push_back(currentMove);
+
     return allCaptures;
 }
+/*
+void Board::checkPromotion(const Move& move, std::shared_ptr<Piece> piece) {
+    if (!piece->getIsKing()) {
+        if (piece->getIsAI() && move.dstRow == 7) {
+            piece->promote();
+        }
+        else if (!(piece->getIsAI()) && move.dstRow == 0) {
+            piece->promote();
+        }
+    }
+}*/

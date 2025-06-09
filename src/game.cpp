@@ -10,6 +10,7 @@ void Game::run() {
         board.printBoard();
         processTurn();
         turnAI = !turnAI;
+        checkPromotion(board.cells);
     }
     std::cout << "Koniec gry!" << std::endl;
 }
@@ -44,4 +45,23 @@ bool Game::checkVictory() {
         return true;
     }
     return false;
+}
+
+void Game::checkPromotion(std::shared_ptr<Piece> cells[Board::SIZE][Board::SIZE]) {
+    // Promocja gracza (wiersz 0)
+    for (int col = 0; col < 8; ++col) {
+        auto& piece = cells[0][col];
+        if (piece && !piece->getIsAI() && !piece->getIsKing()) {
+            piece->promote();
+            std::cout << "Gracz pionek awansował do damki na (0," << col << ")!" << std::endl;
+        }
+    }
+    // Promocja AI (wiersz 7)
+    for (int col = 0; col < 8; ++col) {
+        auto& piece = cells[7][col];
+        if (piece && piece->getIsAI() && !piece->getIsKing()) {
+            piece->promote();
+            std::cout << "AI pionek awansował do damki na (7," << col << ")!" << std::endl;
+        }
+    }
 }

@@ -17,6 +17,7 @@ struct Move {
 class Board {
 public:
     static const int SIZE = 8;
+    std::shared_ptr<Piece> cells[SIZE][SIZE]; // Plansza 8x8 z pionkami
 
     Board();
     ~Board() = default;
@@ -24,13 +25,14 @@ public:
     void init();
     std::vector<Move> getValidMoves(bool forAI) const;
 
-    std::vector<Move> getMultiCaptureMoves(int row, int col, bool forAI, Move currentMove = Move()) const;
     
 
     void applyMove(const Move& move);
     void undoMove(const Move& move, const std::vector<std::shared_ptr<Piece>>& capturedPieces);
     int evaluate() const;
     void printBoard() const;
+
+    //void checkPromotion(const Move& move, std::shared_ptr<Piece> piece);
     
     // Dodatkowe metody dla GUI
     std::shared_ptr<Piece> getPiece(int row, int col) const;
@@ -39,14 +41,20 @@ public:
     int countPieces(bool forAI) const;
 
 private:
-    std::shared_ptr<Piece> cells[SIZE][SIZE];
+    
     
     // Funkcje pomocnicze
     std::vector<Move> getPieceMovesAndCaptures(int row, int col, bool forAI) const;
     std::vector<Move> getCaptureMoves(int row, int col, bool forAI) const;
     std::vector<Move> getSimpleMoves(int row, int col, bool forAI) const;
+
+    std::vector<Move> getMultiCaptureMoves(int row, int col, bool forAI, Move currentMove = Move()) const;
+
+
     bool canCapture(int row, int col, int deltaRow, int deltaCol, bool forAI) const;
     bool isValidMove(int srcRow, int srcCol, int dstRow, int dstCol, bool forAI) const;
+
+    bool canCaptureKing(int row, int col, int deltaRow, int deltaCol, bool forAI, int& enemyRow, int& enemyCol, int& jumpRow, int& jumpCol) const;
 };
 
 #endif // BOARD_H

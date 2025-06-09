@@ -63,6 +63,8 @@ void GUI::run(Board &board) {
         if (!gameOver && !playerTurn) {
             processAITurn(board);
         }
+
+        checkPromotion(board.cells);
         
         render(board);
         checkGameEnd(board);
@@ -494,4 +496,23 @@ void GUI::drawText(const std::string& text, int x, int y, SDL_Color color) {
 Board& GUI::getBoardRef() {
     static Board dummyBoard; // To nie jest idealne rozwiązanie, ale potrzebne do kompilacji
     return dummyBoard;
+}
+
+void GUI::checkPromotion(std::shared_ptr<Piece> cells[Board::SIZE][Board::SIZE]) {
+    // Promocja gracza (wiersz 0)
+    for (int col = 0; col < 8; ++col) {
+        auto& piece = cells[0][col];
+        if (piece && !piece->getIsAI() && !piece->getIsKing()) {
+            piece->promote();
+            std::cout << "Gracz pionek awansował do damki na (0," << col << ")!" << std::endl;
+        }
+    }
+    // Promocja AI (wiersz 7)
+    for (int col = 0; col < 8; ++col) {
+        auto& piece = cells[7][col];
+        if (piece && piece->getIsAI() && !piece->getIsKing()) {
+            piece->promote();
+            std::cout << "AI pionek awansował do damki na (7," << col << ")!" << std::endl;
+        }
+    }
 }

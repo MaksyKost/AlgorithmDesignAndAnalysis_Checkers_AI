@@ -15,6 +15,8 @@ public:
     void run(Board &board);
     void close();
 
+    void checkPromotion(std::shared_ptr<Piece> cells[Board::SIZE][Board::SIZE]);
+
 private:
     SDL_Window* window;
     SDL_Renderer* renderer;
