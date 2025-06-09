@@ -46,7 +46,7 @@ private:
     void drawPieces(Board &board);
     void drawSelectedCell();
     void drawValidMoves();
-    void drawUI();
+    void drawUI(Board& board);
     
     // Funkcje pomocnicze
     void getCellFromMouse(int mouseX, int mouseY, int &row, int &col);

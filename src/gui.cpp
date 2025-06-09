@@ -119,7 +119,7 @@ void GUI::render(Board &board) {
         drawValidMoves();
     }
     
-    drawUI();
+    drawUI(board);
     
     SDL_RenderPresent(renderer);
 }
@@ -240,7 +240,7 @@ void GUI::drawValidMoves() {
     }
 }
 
-void GUI::drawUI() {
+void GUI::drawUI(Board& board) {
     // Rysuj status gry po prawej stronie planszy
     SDL_Rect statusRect = {BOARD_OFFSET_X + BOARD_SIZE + 20, BOARD_OFFSET_Y, 200, 100};
     setColor(255, 255, 255); // Biały tło
@@ -275,8 +275,8 @@ void GUI::drawUI() {
         drawText(gameStatus, statusRect.x + 40, statusRect.y + 15, black);
         
         // Dodaj informacje o liczbie pionków
-        std::string playerPieces = "Gracz: " + std::to_string(getBoardRef().countPieces(false));
-        std::string aiPieces = "AI: " + std::to_string(getBoardRef().countPieces(true));
+        std::string playerPieces = "Gracz: " + std::to_string(board.countPieces(false));
+        std::string aiPieces = "AI: " + std::to_string(board.countPieces(true));
         
         drawText(playerPieces, statusRect.x + 10, statusRect.y + 120, black);
         drawText(aiPieces, statusRect.x + 10, statusRect.y + 140, black);

@@ -33,5 +33,15 @@ void Game::processTurn() {
 bool Game::checkVictory() {
     // Przykładowa logika – sprawdzenie warunków zwycięstwa
     // np. brak ruchów lub pionków którejś ze stron
+
+    // Sprawdź czy któraś strona nie ma pionków lub ruchów
+    if (!board.hasValidMoves(false) || board.countPieces(false) == 0) {
+        std::cout << "AI wygrało!" << std::endl;
+        return true;
+    }
+    if (!board.hasValidMoves(true) || board.countPieces(true) == 0) {
+        std::cout << "Gracz wygrał!" << std::endl;
+        return true;
+    }
     return false;
 }
