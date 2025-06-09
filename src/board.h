@@ -23,6 +23,10 @@ public:
 
     void init();
     std::vector<Move> getValidMoves(bool forAI) const;
+
+    std::vector<Move> getMultiCaptureMoves(int row, int col, bool forAI, Move currentMove = Move()) const;
+    
+
     void applyMove(const Move& move);
     void undoMove(const Move& move, const std::vector<std::shared_ptr<Piece>>& capturedPieces);
     int evaluate() const;

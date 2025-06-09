@@ -222,14 +222,21 @@ void GUI::drawSelectedCell() {
 }
 
 void GUI::drawValidMoves() {
-    setColor(0, 0, 255); // Niebieski
+    setColor(0, 0, 255); // Niebieski dla zwykłych ruchów
     
     for (const auto& move : validMoves) {
+        // Rysuj pole docelowe
         int centerX = BOARD_OFFSET_X + move.dstCol * CELL_SIZE + CELL_SIZE / 2;
         int centerY = BOARD_OFFSET_Y + move.dstRow * CELL_SIZE + CELL_SIZE / 2;
         int radius = CELL_SIZE / 6;
         
-        // Rysuj małe kółko jako wskazówkę ruchu
+        // Jeśli to bicie, użyj czerwonego koloru
+        if (!move.capturedPositions.empty()) {
+            setColor(255, 0, 0); // Czerwony dla bić
+            radius = CELL_SIZE / 4; // Większy znacznik
+        }
+        
+        // Rysuj znacznik ruchu
         for (int y = -radius; y <= radius; y++) {
             for (int x = -radius; x <= radius; x++) {
                 if (x*x + y*y <= radius*radius) {
@@ -237,6 +244,27 @@ void GUI::drawValidMoves() {
                 }
             }
         }
+        
+        // Dla bić - oznacz zbite pionki
+        if (!move.capturedPositions.empty()) {
+            setColor(255, 100, 100); // Jasny czerwony
+            for (const auto& capturedPos : move.capturedPositions) {
+                int capX = BOARD_OFFSET_X + capturedPos.second * CELL_SIZE + CELL_SIZE / 2;
+                int capY = BOARD_OFFSET_Y + capturedPos.first * CELL_SIZE + CELL_SIZE / 2;
+                int capRadius = CELL_SIZE / 8;
+                
+                for (int y = -capRadius; y <= capRadius; y++) {
+                    for (int x = -capRadius; x <= capRadius; x++) {
+                        if (x*x + y*y <= capRadius*capRadius) {
+                            SDL_RenderDrawPoint(renderer, capX + x, capY + y);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Przywróć kolor dla następnego ruchu
+        setColor(0, 0, 255);
     }
 }
 
