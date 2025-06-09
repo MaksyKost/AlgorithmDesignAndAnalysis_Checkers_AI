@@ -3,7 +3,7 @@
 
 #include "board.h"
 #include "ai.h"
-#include <SDL.h>
+#include <SDL_ttf.h>
 #include <string>
 
 class GUI {
@@ -18,6 +18,7 @@ public:
 private:
     SDL_Window* window;
     SDL_Renderer* renderer;
+    TTF_Font* font;  // Dodane pole dla czcionki
     AI ai;
     
     bool gameRunning;
@@ -55,9 +56,12 @@ private:
     void processAITurn(Board &board);
     void checkGameEnd(Board &board);
     void resetSelection();
+    Board& getBoardRef(); // Funkcja pomocnicza
     
     // Kolory
     void setColor(int r, int g, int b, int a = 255);
+
+    void drawText(const std::string& text, int x, int y, SDL_Color color);
 };
 
 #endif // GUI_H

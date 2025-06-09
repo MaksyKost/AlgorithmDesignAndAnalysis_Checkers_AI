@@ -1,8 +1,10 @@
 #include "gui.h"
 #include <iostream>
 #include <sstream>
+#include <SDL_ttf.h>
+#include <string>
 
-GUI::GUI() : window(nullptr), renderer(nullptr), gameRunning(true), 
+GUI::GUI() : window(nullptr), renderer(nullptr), font(nullptr), gameRunning(true), 
              playerTurn(true), gameOver(false), selectedRow(-1), 
              selectedCol(-1), pieceSelected(false) {
     gameStatus = "Twoja kolej - wybierz pionek";
@@ -13,27 +15,43 @@ GUI::~GUI() {
 }
 
 bool GUI::init() {
+    std::cout << "Inicjalizacja SDL..." << std::endl;
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         std::cerr << "Nie można uruchomić SDL: " << SDL_GetError() << std::endl;
         return false;
     }
+    std::cout << "SDL OK" << std::endl;
 
     window = SDL_CreateWindow("Warcaby - AI vs Gracz",
-                             SDL_WINDOWPOS_UNDEFINED,
-                             SDL_WINDOWPOS_UNDEFINED,
-                             WINDOW_WIDTH, WINDOW_HEIGHT,
-                             SDL_WINDOW_SHOWN);
-    
+                              SDL_WINDOWPOS_UNDEFINED,
+                              SDL_WINDOWPOS_UNDEFINED,
+                              WINDOW_WIDTH, WINDOW_HEIGHT,
+                              SDL_WINDOW_SHOWN);
     if (!window) {
         std::cerr << "Nie można utworzyć okna: " << SDL_GetError() << std::endl;
         return false;
     }
+    std::cout << "Okno OK" << std::endl;
 
     renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
     if (!renderer) {
         std::cerr << "Nie można utworzyć renderera: " << SDL_GetError() << std::endl;
         return false;
     }
+    std::cout << "Renderer OK" << std::endl;
+
+    if (TTF_Init() == -1) {
+        std::cerr << "Nie można zainicjować SDL_ttf: " << TTF_GetError() << std::endl;
+        return false;
+    }
+    std::cout << "SDL_ttf OK" << std::endl;
+
+    font = TTF_OpenFont("font/ARIAL.TTF", 13);
+    if (!font) {
+        std::cerr << "Nie można załadować czcionki: " << TTF_GetError() << std::endl;
+        std::cerr << "Gra będzie działać bez tekstu." << std::endl;
+    }
+    std::cout << "Czcionka OK" << std::endl;
 
     return true;
 }
@@ -204,7 +222,7 @@ void GUI::drawSelectedCell() {
 }
 
 void GUI::drawValidMoves() {
-    setColor(0, 0, 255, 128); // Półprzezroczysty niebieski
+    setColor(0, 0, 255); // Niebieski
     
     for (const auto& move : validMoves) {
         int centerX = BOARD_OFFSET_X + move.dstCol * CELL_SIZE + CELL_SIZE / 2;
@@ -249,6 +267,23 @@ void GUI::drawUI() {
         SDL_RenderFillRect(renderer, &gameOverRect);
         setColor(0, 0, 0);
         SDL_RenderDrawRect(renderer, &gameOverRect);
+    }
+    
+    // Rysuj tekst tylko jeśli czcionka jest dostępna
+    if (font) {
+        SDL_Color black = {0, 0, 0, 255};
+        drawText(gameStatus, statusRect.x + 40, statusRect.y + 15, black);
+        
+        // Dodaj informacje o liczbie pionków
+        std::string playerPieces = "Gracz: " + std::to_string(getBoardRef().countPieces(false));
+        std::string aiPieces = "AI: " + std::to_string(getBoardRef().countPieces(true));
+        
+        drawText(playerPieces, statusRect.x + 10, statusRect.y + 120, black);
+        drawText(aiPieces, statusRect.x + 10, statusRect.y + 140, black);
+        
+        if (gameOver) {
+            drawText("Nacisnij R - restart", statusRect.x + 10, statusRect.y + 160, black);
+        }
     }
 }
 
@@ -385,6 +420,11 @@ void GUI::setColor(int r, int g, int b, int a) {
 }
 
 void GUI::close() {
+    if (font) {
+        TTF_CloseFont(font);
+        font = nullptr;
+    }
+    
     if (renderer) {
         SDL_DestroyRenderer(renderer);
         renderer = nullptr;
@@ -395,5 +435,35 @@ void GUI::close() {
         window = nullptr;
     }
     
+    TTF_Quit();
     SDL_Quit();
+}
+
+void GUI::drawText(const std::string& text, int x, int y, SDL_Color color) {
+    if (!font) return; // Bezpiecznie wyjdź jeśli brak czcionki
+    
+    SDL_Surface* surface = TTF_RenderUTF8_Blended(font, text.c_str(), color);
+    if (!surface) {
+        std::cerr << "Błąd renderowania tekstu: " << TTF_GetError() << std::endl;
+        return;
+    }
+    
+    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
+    if (!texture) {
+        std::cerr << "Błąd tworzenia tekstury: " << SDL_GetError() << std::endl;
+        SDL_FreeSurface(surface);
+        return;
+    }
+    
+    SDL_Rect dstRect = { x, y, surface->w, surface->h };
+    SDL_RenderCopy(renderer, texture, nullptr, &dstRect);
+    
+    SDL_FreeSurface(surface);
+    SDL_DestroyTexture(texture);
+}
+
+// Funkcja pomocnicza do uzyskania referencji do planszy (potrzebna dla UI)
+Board& GUI::getBoardRef() {
+    static Board dummyBoard; // To nie jest idealne rozwiązanie, ale potrzebne do kompilacji
+    return dummyBoard;
 }

@@ -6,14 +6,20 @@
       "type": "shell",
       "command": "g++",
       "args": [
+        "main.cpp",
+        "src/ai.cpp",
+        "src/board.cpp",
+        "src/game.cpp",
+        "src/gui.cpp",
+        "src/piece.cpp",
         "-IC:/msys64/mingw64/include/SDL2",
         "-LC:/msys64/mingw64/lib",
         "-lmingw32",
         "-lSDL2main",
         "-lSDL2",
-        "${file}",
+        "-lSDL2_ttf",
         "-o",
-        "${fileDirname}/app.exe"
+        "${workspaceFolder}/main.exe"
       ],
       "group": {
         "kind": "build",
