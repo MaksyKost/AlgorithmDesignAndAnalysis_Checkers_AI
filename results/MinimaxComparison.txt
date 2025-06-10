@@ -1,0 +1,12 @@
+
+=== Testowanie minimax dla poziomu trudności 2 ===
+🔹 Minimax z przycinaniem: 0.000172232 s
+🔸 Minimax bez przycinania: 0.000169756 s
+
+=== Testowanie minimax dla poziomu trudności 4 ===
+🔹 Minimax z przycinaniem: 0.00296875 s
+🔸 Minimax bez przycinania: 0.00682753 s
+
+=== Testowanie minimax dla poziomu trudności 8 ===
+🔹 Minimax z przycinaniem: 0.285149 s
+🔸 Minimax bez przycinania: 4.06391 s
