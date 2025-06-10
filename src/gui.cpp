@@ -394,6 +394,9 @@ void GUI::drawUI(Board& board) {
         int textX = turnIndicator.x + (turnIndicator.w - w) / 2;
         int textY = turnIndicator.y + (turnIndicator.h - h) / 2;
         drawText(movesText, textX, textY, black);
+
+        // Dodaj napis "Ruchy:" obok licznika
+        drawText("Ruchy:", turnIndicator.x - 55, textY, black);
     }
 }
 

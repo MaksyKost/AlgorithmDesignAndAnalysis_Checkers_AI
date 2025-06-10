@@ -275,25 +275,53 @@ void Board::undoMove(const Move& move, const std::vector<std::shared_ptr<Piece>>
 
 int Board::evaluate() const {
     int score = 0;
-    
+
     for (int row = 0; row < SIZE; row++) {
         for (int col = 0; col < SIZE; col++) {
             if (cells[row][col]) {
-                int pieceValue = cells[row][col]->getIsKing() ? 30 : 10;
-                
+                int pieceValue = 10;
+                int kingValue = 50;
+                int value = cells[row][col]->getIsKing() ? kingValue : pieceValue;
+
+                // Premia za bliskość promocji (dla pionków)
+                if (!cells[row][col]->getIsKing()) {
+                    if (cells[row][col]->getIsAI()) {
+                        value += row; // im bliżej 7, tym lepiej dla AI
+                    } else {
+                        value += (7 - row); // im bliżej 0, tym lepiej dla gracza
+                    }
+                }
+
+                // Premia za centrum planszy
+                int centerBonus = 3 - std::abs(3 - col);
+                value += centerBonus;
+
+                // Kara za samotność (brak sąsiadów po bokach)
+                bool lonely = true;
+                for (int d = -1; d <= 1; d += 2) {
+                    int ncol = col + d;
+                    if (ncol >= 0 && ncol < SIZE && cells[row][ncol] && cells[row][ncol]->getIsAI() == cells[row][col]->getIsAI())
+                        lonely = false;
+                }
+                if (lonely) value -= 2;
+
+                // Premia za możliwość bicia
+                if (canCapture(row, col, 1, 1, cells[row][col]->getIsAI()) ||
+                    canCapture(row, col, 1, -1, cells[row][col]->getIsAI()) ||
+                    canCapture(row, col, -1, 1, cells[row][col]->getIsAI()) ||
+                    canCapture(row, col, -1, -1, cells[row][col]->getIsAI())) {
+                    value += 5;
+                }
+
                 if (cells[row][col]->getIsAI()) {
-                    score += pieceValue;
-                    // Bonus za pozycję (środek planszy)
-                    score += static_cast<int>(3 - abs(row - 3.5)) + static_cast<int>(3 - abs(col - 3.5));
+                    score += value;
                 } else {
-                    score -= pieceValue;
-                    // Kara za pozycję przeciwnika
-                    score -= static_cast<int>(3 - abs(row - 3.5)) + static_cast<int>(3 - abs(col - 3.5));
+                    score -= value;
                 }
             }
         }
     }
-    
+
     return score;
 }
 
